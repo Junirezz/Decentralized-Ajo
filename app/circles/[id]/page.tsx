@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -118,6 +118,7 @@ export default function CircleDetailPage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [contributionAmount, setContributionAmount] = useState('');
   const [submittingContribution, setSubmittingContribution] = useState(false);
+  const contributionRequestInFlightRef = useRef(false);
 
   useEffect(() => {
     const user = localStorage.getItem('user');
@@ -162,12 +163,20 @@ export default function CircleDetailPage() {
 
   const handleContribute = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (contributionRequestInFlightRef.current) {
+      return;
+    }
+
     const amount = parseFloat(contributionAmount);
     if (!Number.isFinite(amount) || amount <= 0) {
       toast.error('Enter a valid amount');
       return;
     }
+
+    contributionRequestInFlightRef.current = true;
     setSubmittingContribution(true);
+
     try {
       const res = await authenticatedFetch(`/api/circles/${circleId}/contribute`, {
         method: 'POST',
@@ -185,6 +194,7 @@ export default function CircleDetailPage() {
     } catch {
       toast.error('Contribution failed');
     } finally {
+      contributionRequestInFlightRef.current = false;
       setSubmittingContribution(false);
     }
   };
